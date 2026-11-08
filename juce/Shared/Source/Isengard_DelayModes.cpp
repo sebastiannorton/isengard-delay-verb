@@ -317,44 +317,122 @@ namespace Isengard
     
     HiFiMode::HiFiMode(double sampleRate)
         : DelayModeBase(sampleRate),
-          subtleModulation(nullptr),
-          modulationAmount(0.05f)
+          modLFO(nullptr),
+          dcBlocker(nullptr),
+          toneFilter(nullptr),
+          width(0.5f),
+          tone(0.5f)
     {
-        subtleModulation = new LFO(0.3f, modulationAmount, sampleRate, LFO::SINE);
+        // Create modulation LFO (very subtle, chorus-like)
+        modLFO = new LFO(0.5f, 0.001f, sampleRate, LFO::SINE);
+        
+        // Create DC blocker
+        dcBlocker = new OnePoleFilter(10.0, sampleRate, OnePoleFilter::HIGHPASS);
+        
+        // Create tone filter (highpass for brightness)
+        toneFilter = new OnePoleFilter(100.0, sampleRate, OnePoleFilter::HIGHPASS);
+        
+        // Update tone filter based on initial tone parameter
+        updateToneFilter();
     }
     
     HiFiMode::~HiFiMode()
     {
-        delete subtleModulation;
+        delete modLFO;
+        delete dcBlocker;
+        delete toneFilter;
     }
     
     float HiFiMode::process(float input)
     {
-        // HiFi mode has very subtle modulation
-        return DelayModeBase::process(input);
+        // Step 1: DC blocking
+        float blocked = dcBlocker->process(input);
+        
+        // Step 2: Get modulation value and advance LFO
+        float modValue = modLFO->getValue();
+        modLFO->processBlock(&modValue, 1);
+        
+        // Step 3: Apply modulation to delay line
+        // HiFi mode has very subtle modulation (0.1% max)
+        float baseDelaySamples = delayTimeMs / 1000.0f * sampleRate;
+        float modSamples = baseDelaySamples * modDepth * 0.001f; // Scale to 0.1%
+        
+        delayLine->setDelayMs(delayTimeMs + modSamples * 1000.0f / sampleRate);
+        
+        // Step 4: Get delayed output (read without writing)
+        float delayed = delayLine->read();
+        
+        // Step 5: Process feedback path
+        float feedbackSignal = delayed * feedback;
+        
+        // Step 6: Mix feedback with input
+        float mixed = blocked + feedbackSignal;
+        
+        // Step 7: Write mixed signal to delay line
+        delayLine->process(mixed);
+        
+        // Step 8: Apply tone filter to delayed output
+        float toneFiltered = toneFilter->process(delayed);
+        
+        return toneFiltered;
     }
     
     void HiFiMode::processBlock(const float* input, float* output, int numSamples)
     {
-        DelayModeBase::processBlock(input, output, numSamples);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            output[i] = process(input[i]);
+        }
     }
     
     void HiFiMode::setSampleRate(double sampleRate)
     {
         DelayModeBase::setSampleRate(sampleRate);
-        if (subtleModulation) subtleModulation->setSampleRate(sampleRate);
+        if (modLFO) modLFO->setSampleRate(sampleRate);
+        if (dcBlocker) dcBlocker->setSampleRate(sampleRate);
+        if (toneFilter) toneFilter->setSampleRate(sampleRate);
     }
     
     void HiFiMode::setParameter(const juce::String& paramName, float value)
     {
         DelayModeBase::setParameter(paramName, value);
-        if (paramName == "mod_depth") modulationAmount = clamp(value, 0.0f, 0.2f);
+        
+        if (paramName == "mod_rate")
+        {
+            if (modLFO) modLFO->setRate(clamp(value, 0.1f, 10.0f));
+        }
+        else if (paramName == "mod_depth")
+        {
+            // Scale to very small values for HiFi mode (0-0.1%)
+            if (modLFO) modLFO->setDepth(clamp(value, 0.0f, 1.0f) * 0.001f);
+        }
+        else if (paramName == "width")
+        {
+            width = clamp(value, 0.0f, 1.0f);
+        }
+        else if (paramName == "tone")
+        {
+            tone = clamp(value, 0.0f, 1.0f);
+            updateToneFilter();
+        }
     }
     
     void HiFiMode::reset()
     {
         DelayModeBase::reset();
-        if (subtleModulation) subtleModulation->reset();
+        if (modLFO) modLFO->reset();
+        if (dcBlocker) dcBlocker->reset();
+        if (toneFilter) toneFilter->reset();
+    }
+    
+    void HiFiMode::updateToneFilter()
+    {
+        if (toneFilter)
+        {
+            // Map tone to cutoff: 0.0 -> 100Hz, 1.0 -> 5000Hz
+            float cutoff = 100.0f + 4900.0f * tone;
+            toneFilter->setCutoff(cutoff);
+        }
     }
     
     // ============================================================================

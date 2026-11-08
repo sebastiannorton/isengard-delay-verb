@@ -149,8 +149,13 @@ namespace Isengard
         juce::String getName() const override { return "HiFi"; }
         
     private:
-        LFO* subtleModulation;
-        float modulationAmount;
+        LFO* modLFO;
+        OnePoleFilter* dcBlocker;
+        OnePoleFilter* toneFilter;
+        float width;
+        float tone;
+        
+        void updateToneFilter();
     };
     
     // ============================================================================
