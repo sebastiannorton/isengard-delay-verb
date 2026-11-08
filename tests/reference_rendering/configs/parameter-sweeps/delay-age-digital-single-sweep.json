@@ -1,0 +1,25 @@
+{
+  "name": "Delay Age Sweep (Digital Mode)",
+  "description": "Sweep age parameter from 0.0 to 1.0 in Digital mode",
+  "plugin": "delay",
+  "mode": "Digital",
+  "style": "Single",
+  "parameter": "age",
+  "range": [
+    0.0,
+    1.0
+  ],
+  "steps": 21,
+  "scale": "linear",
+  "signal_type": "sine",
+  "sample_rate": 44100,
+  "duration_seconds": 3.0,
+  "base_params": {
+    "mix": 1.0,
+    "feedback": 0.5,
+    "delayTimeMs": 500.0,
+    "modRate": 0.0,
+    "modDepth": 0.0
+  },
+  "notes": "Test bit crushing effect (50% = 12-bit)"
+}
