@@ -1,0 +1,29 @@
+{
+  "name": "Verb Decay Sweep",
+  "description": "Sweep decay parameter from 0.1 to 0.9",
+  "plugin": "verb",
+  "mode": "1978",
+  "color": "1980s",
+  "parameter": "decay",
+  "range": [
+    0.1,
+    0.9
+  ],
+  "steps": 17,
+  "scale": "linear",
+  "signal_type": "impulse",
+  "sample_rate": 44100,
+  "duration_seconds": 6.0,
+  "base_params": {
+    "mix": 1.0,
+    "predelay": 50.0,
+    "size": 0.5,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "highCut": 10000.0,
+    "damping": 0.5,
+    "modRate": 0.5,
+    "modDepth": 0.3
+  },
+  "notes": "Test how decay affects reverb tail length"
+}
