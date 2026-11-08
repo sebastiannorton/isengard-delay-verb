@@ -1,0 +1,25 @@
+{
+  "name": "Delay Mod Depth Sweep",
+  "description": "Sweep modDepth from 0.0 to 1.0",
+  "plugin": "delay",
+  "mode": "Tape",
+  "style": "Single",
+  "parameter": "modDepth",
+  "range": [
+    0.0,
+    1.0
+  ],
+  "steps": 21,
+  "scale": "linear",
+  "signal_type": "sine",
+  "sample_rate": 44100,
+  "duration_seconds": 3.0,
+  "base_params": {
+    "mix": 1.0,
+    "feedback": 0.5,
+    "delayTimeMs": 500.0,
+    "modRate": 1.0,
+    "drive": 0.5
+  },
+  "notes": "Test modulation depth effect on pitch variation"
+}
