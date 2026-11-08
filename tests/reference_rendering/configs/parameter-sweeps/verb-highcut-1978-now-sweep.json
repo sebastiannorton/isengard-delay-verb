@@ -1,0 +1,29 @@
+{
+  "name": "Verb High Cut Sweep",
+  "description": "Sweep highCut parameter from 1000 to 15000 Hz",
+  "plugin": "verb",
+  "mode": "1978",
+  "color": "Now",
+  "parameter": "highCut",
+  "range": [
+    1000.0,
+    15000.0
+  ],
+  "steps": 15,
+  "scale": "logarithmic",
+  "signal_type": "white",
+  "sample_rate": 44100,
+  "duration_seconds": 5.0,
+  "base_params": {
+    "mix": 1.0,
+    "predelay": 50.0,
+    "decay": 0.5,
+    "size": 0.5,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "damping": 0.5,
+    "modRate": 0.5,
+    "modDepth": 0.3
+  },
+  "notes": "Test frequency-dependent damping"
+}
