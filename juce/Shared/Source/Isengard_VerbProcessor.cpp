@@ -343,6 +343,7 @@ namespace Isengard
     {
         // For now, create a basic mode processor
         // In a full implementation, each mode would have its own class
+        // Note: Verb modes are implemented in Isengard_VerbModes.cpp
         return new VerbModeBase(sampleRate);
     }
     
