@@ -1,0 +1,34 @@
+{
+  "name": "Verb 1987 Mode - 1980s Color - Impulse Signal",
+  "description": "Reference rendering for 1987 mode with 1980s color using impulse signal.",
+  "plugin": "verb",
+  "mode": "1987",
+  "color": "1980s",
+  "parameters": {
+    "mix": 1.0,
+    "predelay": 50.0,
+    "decay": 0.7,
+    "size": 0.7,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "bassXover": 200.0,
+    "highCut": 12000.0,
+    "damping": 0.5,
+    "dampingFreq": 10000.0,
+    "modRate": 0.5,
+    "modDepth": 0.3,
+    "earlyLateBalance": 0.5,
+    "width": 0.5,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "impulse",
+    "position": 0,
+    "amplitude": 0.5
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 9.6,
+  "block_size": 1024,
+  "notes": "1987 mode emulation with 1980s color. Category: hall. Duration adjusted for decay time."
+}
