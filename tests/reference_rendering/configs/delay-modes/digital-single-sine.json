@@ -1,0 +1,26 @@
+{
+  "name": "Digital Mode - Single Style - Sine Wave",
+  "description": "Reference rendering for Digital mode with Single style using sine wave to test bit crushing",
+  "plugin": "delay",
+  "mode": "Digital",
+  "style": "Single",
+  "parameters": {
+    "mix": 1.0,
+    "feedback": 0.6,
+    "delayTimeMs": 500.0,
+    "age": 0.5,
+    "diffusionAmount": 0.3,
+    "diffusionSize": 0.4,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "sine",
+    "frequency": 1000.0,
+    "amplitude": 0.5
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 3.0,
+  "block_size": 1024,
+  "notes": "This configuration tests the Digital mode's bit crushing effect. Age=0.5 should give 12-bit quantization."
+}
