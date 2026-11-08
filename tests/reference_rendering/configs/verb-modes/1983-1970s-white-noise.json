@@ -1,0 +1,34 @@
+{
+  "name": "Verb 1983 Mode - 1970s Color - White Signal",
+  "description": "Reference rendering for 1983 mode with 1970s color using white signal.",
+  "plugin": "verb",
+  "mode": "1983",
+  "color": "1970s",
+  "parameters": {
+    "mix": 1.0,
+    "predelay": 50.0,
+    "decay": 0.5,
+    "size": 0.5,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "bassXover": 200.0,
+    "highCut": 8000.0,
+    "damping": 0.6,
+    "dampingFreq": 10000.0,
+    "modRate": 0.5,
+    "modDepth": 0.3,
+    "earlyLateBalance": 0.5,
+    "width": 0.5,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "white",
+    "position": 0,
+    "amplitude": 0.5
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 8.0,
+  "block_size": 1024,
+  "notes": "1983 mode emulation with 1970s color. Category: hall. Duration adjusted for decay time."
+}
