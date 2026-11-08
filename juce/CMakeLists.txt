@@ -91,6 +91,8 @@ add_library(IsengardSharedDSP STATIC
     Shared/Source/Isengard_DelayStyles.cpp
     Shared/Include/Isengard_VerbProcessor.h
     Shared/Source/Isengard_VerbProcessor.cpp
+    Shared/Include/Isengard_VerbModes.h
+    Shared/Source/Isengard_VerbModes.cpp
     Shared/Include/Isengard_WowFlutterLFO.h
     Shared/Source/Isengard_WowFlutterLFO.cpp
 )
