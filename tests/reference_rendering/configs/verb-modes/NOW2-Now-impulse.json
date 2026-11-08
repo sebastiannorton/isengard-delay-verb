@@ -1,0 +1,34 @@
+{
+  "name": "Verb NOW2 Mode - Now Color - Impulse Signal",
+  "description": "Reference rendering for NOW2 mode with Now color using impulse signal.",
+  "plugin": "verb",
+  "mode": "NOW2",
+  "color": "Now",
+  "parameters": {
+    "mix": 1.0,
+    "predelay": 50.0,
+    "decay": 0.5,
+    "size": 0.5,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "bassXover": 200.0,
+    "highCut": 15000.0,
+    "damping": 0.4,
+    "dampingFreq": 10000.0,
+    "modRate": 0.8,
+    "modDepth": 0.3,
+    "earlyLateBalance": 0.5,
+    "width": 0.5,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "impulse",
+    "position": 0,
+    "amplitude": 0.5
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 8.0,
+  "block_size": 1024,
+  "notes": "NOW2 mode emulation with Now color. Category: ambience. Duration adjusted for decay time."
+}
