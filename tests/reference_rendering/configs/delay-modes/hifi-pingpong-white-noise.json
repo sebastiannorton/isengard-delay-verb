@@ -1,0 +1,29 @@
+{
+  "name": "HiFi Mode - PingPong Style - White Noise",
+  "description": "Reference rendering configuration for HiFi mode with PingPong style using white noise",
+  "plugin": "delay",
+  "mode": "HiFi",
+  "style": "PingPong",
+  "parameters": {
+    "mix": 1.0,
+    "feedback": 0.6,
+    "delayTimeMs": 300.0,
+    "modRate": 0.5,
+    "modDepth": 0.2,
+    "diffusionAmount": 0.3,
+    "diffusionSize": 0.4,
+    "inputGain": 0.0,
+    "outputGain": 0.0,
+    "spread": 0.5,
+    "width": 1.0
+  },
+  "signal": {
+    "type": "white",
+    "seed": 42,
+    "amplitude": 0.3
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 3.0,
+  "block_size": 1024,
+  "notes": "This configuration tests the frequency response and stereo characteristics of HiFi mode with PingPong style. White noise provides a flat spectrum for analyzing the frequency-dependent behavior of the delay."
+}
