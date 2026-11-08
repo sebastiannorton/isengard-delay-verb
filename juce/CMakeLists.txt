@@ -83,6 +83,14 @@ add_library(IsengardSharedDSP STATIC
     Shared/Source/Isengard_DSP.cpp
     Shared/Include/Isengard_FDN.h
     Shared/Source/Isengard_FDN.cpp
+    Shared/Include/Isengard_DelayProcessor.h
+    Shared/Source/Isengard_DelayProcessor.cpp
+    Shared/Include/Isengard_DelayModes.h
+    Shared/Source/Isengard_DelayModes.cpp
+    Shared/Include/Isengard_DelayStyles.h
+    Shared/Source/Isengard_DelayStyles.cpp
+    Shared/Include/Isengard_VerbProcessor.h
+    Shared/Source/Isengard_VerbProcessor.cpp
 )
 
 # Include directories for shared library

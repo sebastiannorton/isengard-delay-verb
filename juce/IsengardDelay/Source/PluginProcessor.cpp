@@ -105,7 +105,8 @@ namespace IsengardDelay
 IsengardDelayAudioProcessor::IsengardDelayAudioProcessor()
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                     .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+                     .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      delayProcessor(nullptr)
 {
     // Create APVTS
     apvts = juce::AudioProcessorValueTreeState::create(
@@ -113,12 +114,12 @@ IsengardDelayAudioProcessor::IsengardDelayAudioProcessor()
         createParameterLayout()
     );
     
-    // Create delay processor (will be replaced with C++ implementation)
-    delayProcessor = std::make_unique<Isengard::DelayProcessor>(44100.0);
+    // Delay processor will be created in prepareToPlay with correct sample rate
 }
 
 IsengardDelayAudioProcessor::~IsengardDelayAudioProcessor()
 {
+    delete delayProcessor;
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout 
@@ -166,8 +167,9 @@ void IsengardDelayAudioProcessor::prepareToPlay(double sampleRate, int samplesPe
     this->sampleRate = sampleRate;
     this->samplesPerBlock = samplesPerBlock;
     
-    // Recreate delay processor with correct sample rate
-    delayProcessor = std::make_unique<Isengard::DelayProcessor>(sampleRate);
+    // Create delay processor with correct sample rate
+    delete delayProcessor;
+    delayProcessor = new Isengard::DelayProcessor(sampleRate);
     
     // Set default mode and style
     delayProcessor->setMode("tape");
@@ -183,7 +185,8 @@ void IsengardDelayAudioProcessor::prepareToPlay(double sampleRate, int samplesPe
 
 void IsengardDelayAudioProcessor::releaseResources()
 {
-    delayProcessor.reset();
+    delete delayProcessor;
+    delayProcessor = nullptr;
 }
 
 void IsengardDelayAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)

@@ -108,7 +108,8 @@ namespace IsengardVerb
 IsengardVerbAudioProcessor::IsengardVerbAudioProcessor()
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                     .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+                     .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      verbProcessor(nullptr)
 {
     // Create APVTS
     apvts = juce::AudioProcessorValueTreeState::create(
@@ -116,12 +117,12 @@ IsengardVerbAudioProcessor::IsengardVerbAudioProcessor()
         createParameterLayout()
     );
     
-    // Create verb processor (will be initialized with correct sample rate in prepareToPlay)
-    verbProcessor = std::make_unique<Isengard::VerbProcessor>(44100.0);
+    // Verb processor will be created in prepareToPlay with correct sample rate
 }
 
 IsengardVerbAudioProcessor::~IsengardVerbAudioProcessor()
 {
+    delete verbProcessor;
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout 
@@ -190,8 +191,9 @@ void IsengardVerbAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     this->sampleRate = sampleRate;
     this->samplesPerBlock = samplesPerBlock;
     
-    // Recreate verb processor with correct sample rate
-    verbProcessor = std::make_unique<Isengard::VerbProcessor>(sampleRate);
+    // Create verb processor with correct sample rate
+    delete verbProcessor;
+    verbProcessor = new Isengard::VerbProcessor(sampleRate);
     
     // Set default mode and color
     verbProcessor->setMode("1978");
@@ -208,7 +210,8 @@ void IsengardVerbAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 
 void IsengardVerbAudioProcessor::releaseResources()
 {
-    verbProcessor.reset();
+    delete verbProcessor;
+    verbProcessor = nullptr;
 }
 
 void IsengardVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)

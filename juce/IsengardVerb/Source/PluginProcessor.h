@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "../../Shared/Include/Isengard_FDN.h"
+#include "../../Shared/Include/Isengard_VerbProcessor.h"
 
 // ============================================================================
 // Plugin Parameters
@@ -115,7 +116,7 @@ private:
     int samplesPerBlock;
     
     // DSP Processor
-    std::unique_ptr<Isengard::VerbProcessor> verbProcessor;
+    Isengard::VerbProcessor* verbProcessor;
     
     // Parameter attachments
     juce::OwnedArray<juce::AudioProcessorValueTreeState::SliderAttachment> parameterAttachments;

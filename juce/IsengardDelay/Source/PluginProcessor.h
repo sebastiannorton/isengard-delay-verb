@@ -10,29 +10,7 @@
 
 #include <JuceHeader.h>
 #include "../Shared/Include/Isengard_DSP.h"
-
-// ============================================================================
-// Mode and Style Classes (Forward Declarations)
-// ============================================================================
-
-namespace IsengardDelay
-{
-    class DelayModeBase;
-    class TapeMode;
-    class HiFiMode;
-    class BBDMode;
-    class DigitalMode;
-    class GhostMode;
-    class PitchMode;
-    class RevPitchMode;
-    
-    class DelayStyleBase;
-    class SingleStyle;
-    class DualStyle;
-    class RatioStyle;
-    class PingPongStyle;
-    class QuadStyle;
-}
+#include "../Shared/Include/Isengard_DelayProcessor.h"
 
 // ============================================================================
 // Plugin Parameters
@@ -140,7 +118,7 @@ private:
     int samplesPerBlock;
     
     // DSP Processor
-    std::unique_ptr<Isengard::DelayProcessor> delayProcessor;
+    Isengard::DelayProcessor* delayProcessor;
     
     // Parameter attachments
     juce::OwnedArray<juce::AudioProcessorValueTreeState::SliderAttachment> parameterAttachments;
