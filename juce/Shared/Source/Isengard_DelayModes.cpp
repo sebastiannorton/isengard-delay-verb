@@ -436,63 +436,200 @@ namespace Isengard
     }
     
     // ============================================================================
+    // BBDCompander Implementation
+    // ============================================================================
+
+    BBDCompander::BBDCompander(float noiseAmount, double sampleRate)
+        : sampleRate(sampleRate),
+          noiseAmount(clamp(noiseAmount, 0.0f, 0.1f)),
+          lowpass(nullptr),
+          signalLevel(0.0f),
+          smoothingAlpha(0.01f),
+          noiseSeed(12345)
+    {
+        lowpass = new OnePoleFilter(5000.0, sampleRate, OnePoleFilter::LOWPASS);
+    }
+    
+    BBDCompander::~BBDCompander()
+    {
+        delete lowpass;
+    }
+    
+    void BBDCompander::setSampleRate(double sampleRate)
+    {
+        this->sampleRate = sampleRate;
+        if (lowpass) lowpass->setSampleRate(sampleRate);
+    }
+    
+    void BBDCompander::setNoiseAmount(float amount)
+    {
+        noiseAmount = clamp(amount, 0.0f, 0.1f);
+    }
+    
+    void BBDCompander::setCutoff(float cutoffHz)
+    {
+        if (lowpass) lowpass->setCutoff(cutoffHz);
+    }
+    
+    float BBDCompander::process(float x)
+    {
+        // Update signal level (absolute value for envelope tracking)
+        float signalAbs = std::abs(x);
+        signalLevel = (1.0f - smoothingAlpha) * signalLevel + smoothingAlpha * signalAbs;
+        
+        // Calculate noise scale based on signal level (E017)
+        // noiseScale = max(0.01, 1.0 - signalLevel * 0.9)
+        float noiseScale = std::max(0.01f, 1.0f - signalLevel * 0.9f);
+        float noiseLevel = noiseScale * noiseAmount;
+        
+        // Generate noise using LCG
+        noiseSeed = noiseSeed * 1103515245 + 12345;
+        float random = (noiseSeed >> 16) / 65536.0f * 2.0f - 1.0f;
+        float noise = random * noiseLevel;
+        
+        // Apply lowpass filter (BBD characteristic)
+        float filtered = lowpass->process(x);
+        
+        // Add noise
+        return filtered + noise;
+    }
+    
+    void BBDCompander::reset()
+    {
+        if (lowpass) lowpass->reset();
+        signalLevel = 0.0f;
+        noiseSeed = 12345;
+    }
+    
+    // ============================================================================
     // BBDMode Implementation
     // ============================================================================
-    
+
     BBDMode::BBDMode(double sampleRate)
         : DelayModeBase(sampleRate),
           compander(nullptr),
-          clockJitterLFO(nullptr),
-          jitterAmount(0.001f),
-          noiseTracking(0.05f)
+          jitterLFO(nullptr),
+          dcBlocker(nullptr),
+          noiseAmount(0.01f),
+          tone(0.5f)
     {
-        compander = new OnePoleFilter(1000.0, sampleRate, OnePoleFilter::LOWPASS);
-        clockJitterLFO = new LFO(5.0f, jitterAmount, sampleRate, LFO::RANDOM);
+        // Create BBD compander
+        compander = new BBDCompander(noiseAmount, sampleRate);
+        
+        // Create clock jitter LFO (random waveform)
+        jitterLFO = new LFO(10.0f, 0.001f, sampleRate, LFO::RANDOM);
+        
+        // Create DC blocker
+        dcBlocker = new OnePoleFilter(10.0, sampleRate, OnePoleFilter::HIGHPASS);
+        
+        // Update compander cutoff based on initial tone
+        updateCompanderCutoff();
     }
     
     BBDMode::~BBDMode()
     {
         delete compander;
-        delete clockJitterLFO;
+        delete jitterLFO;
+        delete dcBlocker;
     }
     
     float BBDMode::process(float input)
     {
-        // Apply compander (simplified)
-        float compressed = compander->process(input);
+        // Step 1: DC blocking
+        float blocked = dcBlocker->process(input);
         
-        // Process through base delay
-        float delayed = DelayModeBase::process(compressed);
+        // Step 2: Apply BBD compander (noise tracking + filtering)
+        float companded = compander->process(blocked);
+        
+        // Step 3: Get jitter modulation value and advance LFO
+        float jitterValue = jitterLFO->getValue();
+        jitterLFO->processBlock(&jitterValue, 1);
+        
+        // Step 4: Apply jitter to delay line
+        // BBD mode has clock jitter modulation
+        float baseDelaySamples = delayTimeMs / 1000.0f * sampleRate;
+        float modSamples = baseDelaySamples * modDepth * 0.005f; // Scale to 0.5%
+        
+        delayLine->setDelayMs(delayTimeMs + modSamples * jitterValue * 1000.0f / sampleRate);
+        
+        // Step 5: Get delayed output (read without writing)
+        float delayed = delayLine->read();
+        
+        // Step 6: Process feedback path
+        float feedbackSignal = delayed * feedback;
+        
+        // Step 7: Mix feedback with input
+        float mixed = companded + feedbackSignal;
+        
+        // Step 8: Write mixed signal to delay line
+        delayLine->process(mixed);
         
         return delayed;
     }
     
     void BBDMode::processBlock(const float* input, float* output, int numSamples)
     {
-        DelayModeBase::processBlock(input, output, numSamples);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            output[i] = process(input[i]);
+        }
     }
     
     void BBDMode::setSampleRate(double sampleRate)
     {
         DelayModeBase::setSampleRate(sampleRate);
         if (compander) compander->setSampleRate(sampleRate);
-        if (clockJitterLFO) clockJitterLFO->setSampleRate(sampleRate);
+        if (jitterLFO) jitterLFO->setSampleRate(sampleRate);
+        if (dcBlocker) dcBlocker->setSampleRate(sampleRate);
     }
     
     void BBDMode::setParameter(const juce::String& paramName, float value)
     {
         DelayModeBase::setParameter(paramName, value);
-        if (paramName == "age") jitterAmount = clamp(value, 0.0f, 0.01f);
+        
+        if (paramName == "mod_rate")
+        {
+            if (jitterLFO) jitterLFO->setRate(clamp(value, 1.0f, 50.0f));
+        }
+        else if (paramName == "mod_depth")
+        {
+            // Scale to small values for jitter
+            if (jitterLFO) jitterLFO->setDepth(clamp(value, 0.0f, 1.0f) * 0.005f);
+        }
+        else if (paramName == "noise")
+        {
+            noiseAmount = clamp(value, 0.0f, 0.1f);
+            if (compander) compander->setNoiseAmount(noiseAmount);
+        }
+        else if (paramName == "tone")
+        {
+            tone = clamp(value, 0.0f, 1.0f);
+            updateCompanderCutoff();
+        }
+        else if (paramName == "age")
+        {
+            // Age parameter affects jitter amount
+            if (jitterLFO) jitterLFO->setDepth(clamp(value, 0.0f, 1.0f) * 0.01f);
+        }
     }
     
     void BBDMode::reset()
     {
         DelayModeBase::reset();
         if (compander) compander->reset();
-        if (clockJitterLFO) clockJitterLFO->reset();
+        if (jitterLFO) jitterLFO->reset();
+        if (dcBlocker) dcBlocker->reset();
     }
     
-    // ============================================================================
+    void BBDMode::updateCompanderCutoff()
+    {
+        if (compander)
+        {
+            // Map tone to BBD lowpass cutoff: 0.0 -> 2000Hz, 1.0 -> 8000Hz
+            float cutoff = 2000.0f + 6000.0f * tone;
+            compander->setCutoff(cutoff);
+        }
+    }
     // DigitalMode Implementation
     // ============================================================================
     

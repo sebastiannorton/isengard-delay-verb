@@ -162,6 +162,40 @@ namespace Isengard
     // BBD Mode
     // ============================================================================
     
+    /**
+     * BBD-style compander for noise tracking.
+     * 
+     * The noise level tracks the signal level, reducing noise when the
+     * signal is present and increasing it when the signal is quiet.
+     * 
+     * Noise Tracking (E017):
+     * - noiseScale = max(0.01, 1.0 - signalLevel * 0.9)
+     * - noiseLevel = noiseScale * noiseAmount
+     */
+    class BBDCompander
+    {
+    public:
+        BBDCompander(float noiseAmount = 0.01f, double sampleRate = 44100.0);
+        ~BBDCompander();
+        
+        void setSampleRate(double sampleRate);
+        void setNoiseAmount(float amount);
+        void setCutoff(float cutoffHz);
+        
+        float process(float x);
+        void reset();
+        
+    private:
+        double sampleRate;
+        float noiseAmount;
+        OnePoleFilter* lowpass;
+        float signalLevel;
+        float smoothingAlpha;
+        unsigned int noiseSeed;
+        
+        JUCE_DECLARE_NON_COPYABLE(BBDCompander)
+    };
+    
     class BBDMode : public DelayModeBase
     {
     public:
@@ -178,10 +212,13 @@ namespace Isengard
         
     private:
         // BBD-specific components
-        OnePoleFilter* compander;
-        LFO* clockJitterLFO;
-        float jitterAmount;
-        float noiseTracking;
+        BBDCompander* compander;
+        LFO* jitterLFO;
+        OnePoleFilter* dcBlocker;
+        float noiseAmount;
+        float tone;
+        
+        void updateCompanderCutoff();
     };
     
     // ============================================================================
