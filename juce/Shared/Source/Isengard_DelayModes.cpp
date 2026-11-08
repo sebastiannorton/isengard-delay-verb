@@ -6,6 +6,10 @@
 
 #include "Isengard_DelayModes.h"
 #include "Isengard_DSP.h"
+#include "Isengard_WowFlutterLFO.h"
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 namespace Isengard
 {
@@ -123,42 +127,83 @@ namespace Isengard
     
     TapeMode::TapeMode(double sampleRate)
         : DelayModeBase(sampleRate),
-          tapeSaturation(nullptr),
-          hissFilter(nullptr),
+          tapeSaturationFilter(nullptr),
+          toneFilter(nullptr),
+          dcBlocker(nullptr),
           wowFlutterLFO(nullptr),
-          wowRate(0.5f),
-          wowDepth(0.01f),
-          flutterRate(2.0f),
-          flutterDepth(0.005f),
-          saturationAmount(0.1f),
-          hissAmount(0.01f),
-          prevInput(0.0f)
+          hissAmount(0.001f),
+          saturationDrive(0.0f),
+          wowDepth(0.3f),
+          flutterDepth(0.2f),
+          tone(1.0f)
     {
-        tapeSaturation = new OnePoleFilter(5000.0, sampleRate, OnePoleFilter::LOWPASS);
-        hissFilter = new OnePoleFilter(10000.0, sampleRate, OnePoleFilter::HIGHPASS);
-        wowFlutterLFO = new LFO(wowRate, wowDepth, sampleRate, LFO::SINE);
+        // Create tape saturation filter (lowpass to smooth saturation)
+        tapeSaturationFilter = new OnePoleFilter(5000.0, sampleRate, OnePoleFilter::LOWPASS);
+        
+        // Create tone filter (lowpass for tape's limited bandwidth)
+        toneFilter = new OnePoleFilter(10000.0, sampleRate, OnePoleFilter::LOWPASS);
+        
+        // Create DC blocker
+        dcBlocker = new OnePoleFilter(10.0, sampleRate, OnePoleFilter::HIGHPASS);
+        
+        // Create wow/flutter LFO
+        wowFlutterLFO = new WowFlutterLFO(sampleRate, delayTimeMs);
+        wowFlutterLFO->setWowDepth(wowDepth);
+        wowFlutterLFO->setFlutterDepth(flutterDepth);
+        
+        // Seed random for hiss
+        std::srand(static_cast<unsigned int>(std::time(nullptr)));
+        
+        // Update tone filter based on initial tone parameter
+        updateToneFilter();
     }
     
     TapeMode::~TapeMode()
     {
-        delete tapeSaturation;
-        delete hissFilter;
+        delete tapeSaturationFilter;
+        delete toneFilter;
+        delete dcBlocker;
         delete wowFlutterLFO;
     }
     
     float TapeMode::process(float input)
     {
-        // Apply tape saturation
-        float saturated = applyTapeSaturation(input);
+        // Step 1: DC blocking
+        float blocked = dcBlocker->process(input);
         
-        // Apply wow/flutter modulation
-        float modulated = applyWowFlutter(saturated);
+        // Step 2: Get modulation values
+        auto [wowMod, flutterMod] = wowFlutterLFO->getValues();
+        wowFlutterLFO->processSample();
         
-        // Process through base delay
-        float delayed = DelayModeBase::process(modulated);
+        // Step 3: Apply modulation to delay time
+        // Calculate modulation amount in samples
+        float baseDelaySamples = delayTimeMs / 1000.0f * sampleRate;
+        float modAmount = (wowDepth * wowMod + flutterDepth * flutterMod) * modDepth;
+        float modSamples = baseDelaySamples * modAmount * 0.005f; // +/- 0.5% max
         
-        // Add tape hiss
-        float output = addTapeHiss(delayed);
+        // Apply modulation to delay line
+        delayLine->setDelayMs(delayTimeMs + modSamples * 1000.0f / sampleRate);
+        
+        // Step 4: Get delayed output (read without writing)
+        float delayed = delayLine->read();
+        
+        // Step 5: Process feedback path
+        float feedbackSignal = delayed * feedback;
+        
+        // Apply tape saturation to feedback
+        feedbackSignal = applyTapeSaturation(feedbackSignal);
+        
+        // Step 6: Mix feedback with input
+        float mixed = blocked + feedbackSignal;
+        
+        // Step 7: Write mixed signal to delay line
+        delayLine->process(mixed);
+        
+        // Step 8: Apply tone filter to delayed output
+        float toneFiltered = toneFilter->process(delayed);
+        
+        // Step 9: Add tape hiss
+        float output = addTapeHiss(toneFiltered);
         
         return output;
     }
@@ -174,8 +219,9 @@ namespace Isengard
     void TapeMode::setSampleRate(double sampleRate)
     {
         DelayModeBase::setSampleRate(sampleRate);
-        if (tapeSaturation) tapeSaturation->setSampleRate(sampleRate);
-        if (hissFilter) hissFilter->setSampleRate(sampleRate);
+        if (tapeSaturationFilter) tapeSaturationFilter->setSampleRate(sampleRate);
+        if (toneFilter) toneFilter->setSampleRate(sampleRate);
+        if (dcBlocker) dcBlocker->setSampleRate(sampleRate);
         if (wowFlutterLFO) wowFlutterLFO->setSampleRate(sampleRate);
     }
     
@@ -183,57 +229,86 @@ namespace Isengard
     {
         DelayModeBase::setParameter(paramName, value);
         
-        if (paramName == "wow_rate") wowRate = clamp(value, 0.1f, 5.0f);
-        else if (paramName == "wow_depth") wowDepth = clamp(value, 0.0f, 0.1f);
-        else if (paramName == "flutter_rate") flutterRate = clamp(value, 0.1f, 10.0f);
-        else if (paramName == "flutter_depth") flutterDepth = clamp(value, 0.0f, 0.05f);
-        else if (paramName == "saturation") saturationAmount = clamp(value, 0.0f, 1.0f);
-        else if (paramName == "hiss") hissAmount = clamp(value, 0.0f, 0.1f);
+        if (paramName == "drive")
+        {
+            saturationDrive = clamp(value, 0.0f, 1.0f);
+        }
+        else if (paramName == "wow_depth")
+        {
+            wowDepth = clamp(value, 0.0f, 1.0f);
+            if (wowFlutterLFO) wowFlutterLFO->setWowDepth(wowDepth);
+        }
+        else if (paramName == "flutter_depth")
+        {
+            flutterDepth = clamp(value, 0.0f, 1.0f);
+            if (wowFlutterLFO) wowFlutterLFO->setFlutterDepth(flutterDepth);
+        }
+        else if (paramName == "tone")
+        {
+            tone = clamp(value, 0.0f, 1.0f);
+            updateToneFilter();
+        }
+        else if (paramName == "hiss")
+        {
+            hissAmount = clamp(value, 0.0f, 0.005f);
+        }
     }
     
     void TapeMode::reset()
     {
         DelayModeBase::reset();
-        if (tapeSaturation) tapeSaturation->reset();
-        if (hissFilter) hissFilter->reset();
+        if (tapeSaturationFilter) tapeSaturationFilter->reset();
+        if (toneFilter) toneFilter->reset();
+        if (dcBlocker) dcBlocker->reset();
         if (wowFlutterLFO) wowFlutterLFO->reset();
-        prevInput = 0.0f;
     }
     
     float TapeMode::applyTapeSaturation(float x)
     {
-        // Simple soft clipping saturation
-        if (saturationAmount > 0)
-        {
-            float threshold = 0.8f * (1.0f - saturationAmount);
-            if (x > threshold)
-                x = threshold + (x - threshold) / (1.0f + (x - threshold) * (x - threshold) * 10.0f);
-            else if (x < -threshold)
-                x = -threshold - (-x - threshold) / (1.0f + (-x - threshold) * (-x - threshold) * 10.0f);
-        }
-        return tapeSaturation->process(x);
-    }
-    
-    float TapeMode::applyWowFlutter(float x)
-    {
-        // Apply wow/flutter by modulating the sample rate slightly
-        float wowValue = wowFlutterLFO->getValue();
-        float modulated = x * (1.0f + wowDepth * wowValue);
-        wowFlutterLFO->processBlock(&wowValue, 1);
-        return modulated;
+        // Tape saturation using tanh-based soft clipping
+        // Input gain: 1.0 + 3.0 * drive
+        // Output gain: 1.0 / (1.0 + 0.5 * drive)
+        float inputGain = 1.0f + 3.0f * saturationDrive;
+        float outputGain = 1.0f / (1.0f + 0.5f * saturationDrive);
+        
+        // Apply input gain
+        x = x * inputGain;
+        
+        // Soft clipping using tanh
+        x = std::tanh(x);
+        
+        // Apply output gain
+        x = x * outputGain;
+        
+        // Smooth with filter
+        if (tapeSaturationFilter)
+            x = tapeSaturationFilter->process(x);
+        
+        return x;
     }
     
     float TapeMode::addTapeHiss(float x)
     {
-        // Add subtle hiss noise
+        // Add subtle hiss noise (tape noise floor)
         if (hissAmount > 0)
         {
-            static float noiseState = 0.0f;
-            // Simple pseudo-random noise
-            noiseState = noiseState * 0.99f + (rand() / (float)RAND_MAX - 0.5f) * 0.01f;
-            x = x + noiseState * hissAmount;
+            // Generate pseudo-random noise using a simple LCG
+            static unsigned int noiseSeed = 12345;
+            noiseSeed = noiseSeed * 1103515245 + 12345;
+            float random = (noiseSeed >> 16) / 65536.0f * 2.0f - 1.0f;
+            x = x + random * hissAmount;
         }
         return x;
+    }
+    
+    void TapeMode::updateToneFilter()
+    {
+        if (toneFilter)
+        {
+            // Map tone to cutoff: 0.0 -> 4000Hz, 1.0 -> 15000Hz
+            float cutoff = 4000.0f + 11000.0f * tone;
+            toneFilter->setCutoff(cutoff);
+        }
     }
     
     // ============================================================================

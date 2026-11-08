@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "Isengard_DSP.h"
+#include "Isengard_WowFlutterLFO.h"
 
 namespace Isengard
 {
@@ -98,20 +99,26 @@ namespace Isengard
         
     private:
         // Tape-specific components
-        OnePoleFilter* tapeSaturation;
-        OnePoleFilter* hissFilter;
-        LFO* wowFlutterLFO;
+        OnePoleFilter* tapeSaturationFilter;
+        OnePoleFilter* toneFilter;
+        OnePoleFilter* dcBlocker;
+        WowFlutterLFO* wowFlutterLFO;
         
         // Tape parameters
-        float wowRate;
-        float wowDepth;
-        float flutterRate;
-        float flutterDepth;
-        float saturationAmount;
         float hissAmount;
+        float saturationDrive;
+        float wowDepth;
+        float flutterDepth;
+        float tone;
         
-        // Internal state
-        float prevInput;
+        // Apply tape saturation
+        float applyTapeSaturation(float x);
+        
+        // Add tape hiss
+        float addTapeHiss(float x);
+        
+        // Update tone filter based on tone parameter
+        void updateToneFilter();
         
         // Apply tape saturation
         float applyTapeSaturation(float x);
