@@ -1,0 +1,26 @@
+{
+  "name": "BBD Mode - Single Style - Pink Noise",
+  "description": "Reference rendering for BBD mode with Single style using pink noise to test noise tracking",
+  "plugin": "delay",
+  "mode": "BBD",
+  "style": "Single",
+  "parameters": {
+    "mix": 1.0,
+    "feedback": 0.5,
+    "delayTimeMs": 300.0,
+    "noiseAmount": 0.3,
+    "diffusionAmount": 0.2,
+    "diffusionSize": 0.3,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "pink",
+    "seed": 42,
+    "amplitude": 0.4
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 3.0,
+  "block_size": 1024,
+  "notes": "This configuration tests the BBD mode's noise tracking behavior. The noise should be less audible with louder input signals."
+}
