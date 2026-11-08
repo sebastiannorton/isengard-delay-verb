@@ -1,0 +1,26 @@
+{
+  "name": "Delay Diffusion Amount Sweep",
+  "description": "Sweep diffusionAmount from 0.0 to 1.0",
+  "plugin": "delay",
+  "mode": "Tape",
+  "style": "Single",
+  "parameter": "diffusionAmount",
+  "range": [
+    0.0,
+    1.0
+  ],
+  "steps": 21,
+  "scale": "linear",
+  "signal_type": "white",
+  "sample_rate": 44100,
+  "duration_seconds": 5.0,
+  "base_params": {
+    "mix": 1.0,
+    "feedback": 0.7,
+    "delayTimeMs": 500.0,
+    "modRate": 1.0,
+    "modDepth": 0.3,
+    "diffusionSize": 0.5
+  },
+  "notes": "Test diffusion network effect on echo density"
+}
