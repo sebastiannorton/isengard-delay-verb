@@ -1,0 +1,75 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules and REA
+.rea-node_modules/
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build outputs
+*.component
+*.vst3
+*.dll
+*.so
+*.dylib
+build/
+Binaries/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Zip files (keep the export but ignore others)
+*.zip
+!isengard-project-export.zip
+
+# Large binary files
+*.wav
+*.aiff
+*.mp3
+
+# Test outputs
+tests/results/
+tests/output/
