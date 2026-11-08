@@ -32,6 +32,10 @@ private:
     juce::OwnedArray<juce::Label> labels;
     juce::OwnedArray<juce::ComboBox> comboBoxes;
     
+    // Parameter attachments
+    juce::OwnedArray<juce::AudioProcessorValueTreeState::SliderAttachment> sliderAttachments;
+    juce::OwnedArray<juce::AudioProcessorValueTreeState::ComboBoxAttachment> comboAttachments;
+    
     void createControls();
     void setupParameterAttachments();
     

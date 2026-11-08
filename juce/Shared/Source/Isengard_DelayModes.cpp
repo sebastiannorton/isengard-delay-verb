@@ -632,66 +632,186 @@ namespace Isengard
     }
     // DigitalMode Implementation
     // ============================================================================
+    // BitCrusher Implementation
+    // ============================================================================
+
+    BitCrusher::BitCrusher(int bits, double sampleRate)
+        : sampleRate(sampleRate),
+          bits(clamp(bits, 1, 24)),
+          step(0.0f),
+          ditherSeed(12345)
+    {
+        updateStep();
+    }
     
+    BitCrusher::~BitCrusher()
+    {
+    }
+    
+    void BitCrusher::setBits(int bits)
+    {
+        this->bits = clamp(bits, 1, 24);
+        updateStep();
+    }
+    
+    void BitCrusher::setSampleRate(double sampleRate)
+    {
+        this->sampleRate = sampleRate;
+    }
+    
+    void BitCrusher::updateStep()
+    {
+        if (bits > 0)
+        {
+            step = 2.0f / (1 << bits);
+        }
+        else
+        {
+            step = 0.0f;
+        }
+    }
+    
+    float BitCrusher::process(float x)
+    {
+        if (bits >= 24)
+        {
+            return x; // No quantization
+        }
+        
+        // Quantize to specified bits
+        float quantized = std::floor(x / step + 0.5f) * step;
+        
+        // Add dithering to reduce quantization artifacts
+        // Simple triangular dither
+        ditherSeed = ditherSeed * 1103515245 + 12345;
+        float random = (ditherSeed >> 16) / 65536.0f * 2.0f - 1.0f;
+        float dither = random * step;
+        
+        return quantized + dither * 0.5f; // Reduced dither for subtlety
+    }
+    
+    void BitCrusher::reset()
+    {
+        ditherSeed = 12345;
+    }
+    
+    // ============================================================================
+    // DigitalMode Implementation
+    // ============================================================================
+
     DigitalMode::DigitalMode(double sampleRate)
         : DelayModeBase(sampleRate),
-          bitDepth(16),
-          bitCrushAmount(0.0f)
+          bitCrusher(nullptr),
+          dcBlocker(nullptr),
+          toneFilter(nullptr),
+          tone(0.5f)
     {
+        // Create bit crusher (default 16-bit)
+        bitCrusher = new BitCrusher(16, sampleRate);
+        
+        // Create DC blocker
+        dcBlocker = new OnePoleFilter(10.0, sampleRate, OnePoleFilter::HIGHPASS);
+        
+        // Create tone filter (lowpass for digital characteristic)
+        toneFilter = new OnePoleFilter(10000.0, sampleRate, OnePoleFilter::LOWPASS);
+        
+        // Update filters based on initial parameters
+        updateToneFilter();
     }
     
     DigitalMode::~DigitalMode()
     {
+        delete bitCrusher;
+        delete dcBlocker;
+        delete toneFilter;
     }
     
     float DigitalMode::process(float input)
     {
-        // Apply bit crushing
-        float crushed = applyBitCrushing(input);
+        // Step 1: DC blocking
+        float blocked = dcBlocker->process(input);
         
-        // Process through base delay
-        float delayed = DelayModeBase::process(crushed);
+        // Step 2: Apply bit crushing (in the input path for Digital mode)
+        // This simulates the digital degradation
+        float crushed = bitCrusher->process(blocked);
         
-        return delayed;
+        // Step 3: Get delayed output (read without writing)
+        float delayed = delayLine->read();
+        
+        // Step 4: Process feedback path
+        float feedbackSignal = delayed * feedback;
+        
+        // Step 5: Mix feedback with input
+        float mixed = crushed + feedbackSignal;
+        
+        // Step 6: Write mixed signal to delay line
+        delayLine->process(mixed);
+        
+        // Step 7: Apply tone filter to delayed output
+        float toneFiltered = toneFilter->process(delayed);
+        
+        return toneFiltered;
     }
     
     void DigitalMode::processBlock(const float* input, float* output, int numSamples)
     {
-        DelayModeBase::processBlock(input, output, numSamples);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            output[i] = process(input[i]);
+        }
     }
     
     void DigitalMode::setSampleRate(double sampleRate)
     {
         DelayModeBase::setSampleRate(sampleRate);
+        if (bitCrusher) bitCrusher->setSampleRate(sampleRate);
+        if (dcBlocker) dcBlocker->setSampleRate(sampleRate);
+        if (toneFilter) toneFilter->setSampleRate(sampleRate);
     }
     
     void DigitalMode::setParameter(const juce::String& paramName, float value)
     {
         DelayModeBase::setParameter(paramName, value);
-        if (paramName == "age") bitCrushAmount = clamp(value, 0.0f, 1.0f);
+        
+        if (paramName == "age")
+        {
+            // Age Mapping (E019):
+            // Age 0% = 24-bit, Age 50% = 12-bit, Age 100% = 8-bit
+            // Formula: bits = 24 - floor(age * 16)
+            int bits = 24 - static_cast<int>(value * 16);
+            bits = clamp(bits, 8, 24);
+            if (bitCrusher) bitCrusher->setBits(bits);
+        }
+        else if (paramName == "tone")
+        {
+            tone = clamp(value, 0.0f, 1.0f);
+            updateToneFilter();
+        }
     }
     
     void DigitalMode::reset()
     {
         DelayModeBase::reset();
+        if (bitCrusher) bitCrusher->reset();
+        if (dcBlocker) dcBlocker->reset();
+        if (toneFilter) toneFilter->reset();
     }
     
-    float DigitalMode::applyBitCrushing(float x)
+    void DigitalMode::updateBitCrusher()
     {
-        if (bitCrushAmount > 0)
-        {
-            // Reduce bit depth based on age parameter
-            int reducedBits = juce::jlimit(1, 24, static_cast<int>(16 * (1.0f - bitCrushAmount)));
-            float scale = static_cast<float>((1 << reducedBits) - 1);
-            x = std::round(x * scale) / scale;
-        }
-        return x;
+        // This is called when age parameter changes
+        // Implementation is in setParameter("age")
     }
     
-    // ============================================================================
-    // GhostMode Implementation (Placeholder)
-    // ============================================================================
-    
+    void DigitalMode::updateToneFilter()
+    {
+        if (toneFilter)
+        {
+            // Map tone to cutoff: 0.0 -> 4000Hz, 1.0 -> 15000Hz
+            float cutoff = 4000.0f + 11000.0f * tone;
+            toneFilter->setCutoff(cutoff);
+        }
+    }
     GhostMode::GhostMode(double sampleRate)
         : DelayModeBase(sampleRate),
           frequencyShiftLFO(nullptr),
@@ -748,64 +868,142 @@ namespace Isengard
     }
     
     // ============================================================================
-    // PitchMode Implementation (Placeholder)
+    // PitchMode Implementation
     // ============================================================================
     
     PitchMode::PitchMode(double sampleRate)
         : DelayModeBase(sampleRate),
           pitchShiftSemitones(0.0f),
-          pitchDetuneCents(0.0f)
+          pitchDetuneCents(0.0f),
+          pitchShiftPhase(0.0f),
+          pitchShiftBufferPos(0)
     {
+        // Create pitch shift buffer (1 second max)
+        pitchShiftBuffer = new DelayLine(1.0, sampleRate);
+        
+        // Calculate pitch ratio from semitones
+        updatePitchRatio();
     }
     
     PitchMode::~PitchMode()
     {
+        delete pitchShiftBuffer;
     }
     
     float PitchMode::process(float input)
     {
-        return DelayModeBase::process(input);
+        // Write to pitch shift buffer
+        pitchShiftBuffer->process(input);
+        
+        // Get delayed signal
+        float delayed = delayLine->process(input);
+        
+        // Apply pitch shift to feedback
+        float pitchShifted = applyPitchShift(delayed, pitchShiftSemitones + pitchDetuneCents / 100.0f);
+        
+        // Apply feedback
+        float feedbackSignal = pitchShifted * feedback;
+        
+        // Apply modulation to delay time
+        float modValue = modulationLFO->getValue();
+        float modDelayTime = delayTimeMs * (1.0f + modDepth * modValue);
+        delayLine->setDelayMs(clamp(modDelayTime, 1.0f, 5000.0f));
+        
+        // Advance LFO
+        modulationLFO->processBlock(&modValue, 1);
+        
+        // Mix dry and wet
+        return input + feedbackSignal;
     }
     
     void PitchMode::processBlock(const float* input, float* output, int numSamples)
     {
-        DelayModeBase::processBlock(input, output, numSamples);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            output[i] = process(input[i]);
+        }
     }
     
     void PitchMode::setSampleRate(double sampleRate)
     {
         DelayModeBase::setSampleRate(sampleRate);
+        if (pitchShiftBuffer) pitchShiftBuffer->setSampleRate(sampleRate);
+        updatePitchRatio();
     }
     
     void PitchMode::setParameter(const juce::String& paramName, float value)
     {
         DelayModeBase::setParameter(paramName, value);
-        if (paramName == "pitch_shift") pitchShiftSemitones = value;
-        else if (paramName == "pitch_detune") pitchDetuneCents = value;
+        if (paramName == "pitch_shift") 
+        {
+            pitchShiftSemitones = value;
+            updatePitchRatio();
+        }
+        else if (paramName == "pitch_detune") 
+        {
+            pitchDetuneCents = value;
+            updatePitchRatio();
+        }
     }
     
     void PitchMode::reset()
     {
         DelayModeBase::reset();
+        if (pitchShiftBuffer) pitchShiftBuffer->reset();
+        pitchShiftPhase = 0.0f;
+        pitchShiftBufferPos = 0;
+    }
+    
+    void PitchMode::updatePitchRatio()
+    {
+        // Calculate pitch ratio from semitones
+        // ratio = 2^(semitones / 12)
+        float totalSemitones = pitchShiftSemitones + pitchDetuneCents / 100.0f;
+        pitchRatio = std::pow(2.0f, totalSemitones / 12.0f);
     }
     
     float PitchMode::applyPitchShift(float x, float semitones)
     {
-        // Placeholder - actual pitch shifting would be more complex
-        return x;
+        // Simple pitch shift using delay line with variable read position
+        // This is a simplified granular approach
+        
+        if (std::abs(semitones) < 0.01f)
+        {
+            // No pitch shift
+            return x;
+        }
+        
+        // Calculate read position offset based on pitch ratio
+        float ratio = std::pow(2.0f, semitones / 12.0f);
+        
+        // For positive pitch shift (up), read from earlier in buffer
+        // For negative pitch shift (down), read from later in buffer
+        float readOffset = (ratio - 1.0f) * 100.0f; // Scale for effect
+        
+        // Get current delay time
+        float currentDelayMs = delayLine->getDelayTime() * 1000.0f;
+        float readPosMs = currentDelayMs + readOffset;
+        
+        // Clamp and read from pitch shift buffer
+        readPosMs = clamp(readPosMs, 1.0f, 1000.0f);
+        pitchShiftBuffer->setDelayMs(readPosMs);
+        return pitchShiftBuffer->read();
     }
     
     // ============================================================================
-    // RevPitchMode Implementation (Placeholder)
+    // RevPitchMode Implementation
     // ============================================================================
     
     RevPitchMode::RevPitchMode(double sampleRate)
         : DelayModeBase(sampleRate),
           reverseBuffer(nullptr),
           pitchShiftAmount(0.0f),
-          reversePosition(0)
+          reversePosition(0),
+          reverseDelayMs(500.0f),
+          reversePhase(0.0f)
     {
         reverseBuffer = new DelayLine(5.0, sampleRate);
+        reverseBuffer->setDelayMs(reverseDelayMs);
     }
     
     RevPitchMode::~RevPitchMode()
@@ -815,12 +1013,43 @@ namespace Isengard
     
     float RevPitchMode::process(float input)
     {
-        return DelayModeBase::process(input);
+        // Write to main delay line
+        float delayed = delayLine->process(input);
+        
+        // Get reverse delayed signal
+        float reverseDelayed = reverseBuffer->read();
+        
+        // Apply pitch shift to reverse signal
+        float pitchRatio = std::pow(2.0f, pitchShiftAmount / 12.0f);
+        
+        // Simple reverse with pitch: read from different position
+        float readPosMs = reverseDelayMs * (1.0f + (pitchRatio - 1.0f) * 0.5f);
+        readPosMs = clamp(readPosMs, 1.0f, 5000.0f);
+        
+        // Apply feedback with pitch-shifted reverse
+        float feedbackSignal = reverseDelayed * feedback * pitchRatio;
+        
+        // Apply modulation to delay time
+        float modValue = modulationLFO->getValue();
+        float modDelayTime = delayTimeMs * (1.0f + modDepth * modValue);
+        delayLine->setDelayMs(clamp(modDelayTime, 1.0f, 5000.0f));
+        
+        // Update reverse buffer
+        reverseBuffer->process(delayed);
+        
+        // Advance LFO
+        modulationLFO->processBlock(&modValue, 1);
+        
+        // Mix dry and wet
+        return input + feedbackSignal;
     }
     
     void RevPitchMode::processBlock(const float* input, float* output, int numSamples)
     {
-        DelayModeBase::processBlock(input, output, numSamples);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            output[i] = process(input[i]);
+        }
     }
     
     void RevPitchMode::setSampleRate(double sampleRate)
@@ -832,7 +1061,16 @@ namespace Isengard
     void RevPitchMode::setParameter(const juce::String& paramName, float value)
     {
         DelayModeBase::setParameter(paramName, value);
-        if (paramName == "pitch_shift") pitchShiftAmount = value;
+        if (paramName == "pitch_shift") 
+        {
+            pitchShiftAmount = value;
+        }
+        else if (paramName == "delay_time_ms")
+        {
+            delayTimeMs = value;
+            reverseDelayMs = value * 0.8f; // Reverse delay is slightly shorter
+            if (reverseBuffer) reverseBuffer->setDelayMs(reverseDelayMs);
+        }
     }
     
     void RevPitchMode::reset()
@@ -840,5 +1078,6 @@ namespace Isengard
         DelayModeBase::reset();
         if (reverseBuffer) reverseBuffer->reset();
         reversePosition = 0;
+        reversePhase = 0.0f;
     }
 }

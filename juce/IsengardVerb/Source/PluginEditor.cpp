@@ -282,18 +282,72 @@ void IsengardVerbAudioProcessorEditor::createControls()
 
 void IsengardVerbAudioProcessorEditor::setupParameterAttachments()
 {
-    // In a real implementation, we would create SliderAttachment and 
-    // ComboBoxAttachment objects to connect the UI controls to the APVTS parameters.
-    // This is a placeholder for the actual implementation.
+    // Clear existing attachments
+    sliderAttachments.clear();
+    comboAttachments.clear();
     
-    // For now, we'll just set some default values
-    for (auto* slider : sliders)
-    {
-        slider->setValue(0.5, juce::dontSendNotification);
-    }
+    // Get APVTS from processor
+    auto& apvts = audioProcessor.apvts;
+    
+    // Find controls by name and attach them
+    // Mode and Color combo boxes
     for (auto* combo : comboBoxes)
     {
-        combo->setSelectedItemIndex(0, juce::dontSendNotification);
+        if (combo->getName() == "modeCombo")
+        {
+            comboAttachments.add(new juce::AudioProcessorValueTreeState::ComboBoxAttachment(
+                apvts, "mode", *combo));
+        }
+        else if (combo->getName() == "colorCombo")
+        {
+            comboAttachments.add(new juce::AudioProcessorValueTreeState::ComboBoxAttachment(
+                apvts, "color", *combo));
+        }
+    }
+    
+    // Slider attachments
+    for (auto* slider : sliders)
+    {
+        if (slider->getName() == "mixSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "mix", *slider));
+        }
+        else if (slider->getName() == "decaySlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "decay", *slider));
+        }
+        else if (slider->getName() == "sizeSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "size", *slider));
+        }
+        else if (slider->getName() == "preDelaySlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "pre_delay", *slider));
+        }
+        else if (slider->getName() == "modRateSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "mod_rate", *slider));
+        }
+        else if (slider->getName() == "modDepthSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "mod_depth", *slider));
+        }
+        else if (slider->getName() == "widthSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "width", *slider));
+        }
+        else if (slider->getName() == "earlyLateSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "early_late_balance", *slider));
+        }
     }
 }
 

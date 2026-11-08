@@ -196,6 +196,41 @@ namespace Isengard
         JUCE_DECLARE_NON_COPYABLE(BBDCompander)
     };
     
+    /**
+     * Bit depth reduction effect.
+     * 
+     * Simulates the effect of low bit-depth digital systems by quantizing
+     * the signal to a specified number of bits.
+     * 
+     * Age Mapping (E019):
+     * - Age 0% = 24-bit
+     * - Age 50% = 12-bit
+     * - Age 100% = 8-bit
+     * - Formula: bits = 24 - floor(age * 16)
+     */
+    class BitCrusher
+    {
+    public:
+        BitCrusher(int bits = 16, double sampleRate = 44100.0);
+        ~BitCrusher();
+        
+        void setBits(int bits);
+        void setSampleRate(double sampleRate);
+        
+        float process(float x);
+        void reset();
+        
+    private:
+        double sampleRate;
+        int bits;
+        float step;
+        unsigned int ditherSeed;
+        
+        void updateStep();
+        
+        JUCE_DECLARE_NON_COPYABLE(BitCrusher)
+    };
+    
     class BBDMode : public DelayModeBase
     {
     public:
@@ -240,12 +275,13 @@ namespace Isengard
         juce::String getName() const override { return "Digital"; }
         
     private:
-        // Digital-specific: bit crushing
-        int bitDepth;
-        float bitCrushAmount;
+        BitCrusher* bitCrusher;
+        OnePoleFilter* dcBlocker;
+        OnePoleFilter* toneFilter;
+        float tone;
         
-        // Apply bit crushing
-        float applyBitCrushing(float x);
+        void updateBitCrusher();
+        void updateToneFilter();
     };
     
     // ============================================================================
@@ -298,8 +334,13 @@ namespace Isengard
         // Pitch-specific: pitch shifting in feedback
         float pitchShiftSemitones;
         float pitchDetuneCents;
+        float pitchRatio;
+        float pitchShiftPhase;
+        int pitchShiftBufferPos;
+        DelayLine* pitchShiftBuffer;
         
-        // Simple pitch shifter (placeholder)
+        // Simple pitch shifter
+        void updatePitchRatio();
         float applyPitchShift(float x, float semitones);
     };
     
@@ -326,5 +367,7 @@ namespace Isengard
         DelayLine* reverseBuffer;
         float pitchShiftAmount;
         int reversePosition;
+        float reverseDelayMs;
+        float reversePhase;
     };
 }

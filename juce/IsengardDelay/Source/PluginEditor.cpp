@@ -137,18 +137,57 @@ void IsengardDelayAudioProcessorEditor::createControls()
 
 void IsengardDelayAudioProcessorEditor::setupParameterAttachments()
 {
-    // In a real implementation, we would create SliderAttachment and 
-    // ComboBoxAttachment objects to connect the UI controls to the APVTS parameters.
-    // This is a placeholder for the actual implementation.
+    // Clear existing attachments
+    sliderAttachments.clear();
+    comboAttachments.clear();
     
-    // For now, we'll just set some default values
-    for (auto* slider : sliders)
-    {
-        slider->setValue(0.5, juce::dontSendNotification);
-    }
+    // Get APVTS from processor
+    auto& apvts = audioProcessor.apvts;
+    
+    // Find controls by name and attach them
+    // Mode combo box
     for (auto* combo : comboBoxes)
     {
-        combo->setSelectedItemIndex(0, juce::dontSendNotification);
+        if (combo->getName() == "modeCombo")
+        {
+            comboAttachments.add(new juce::AudioProcessorValueTreeState::ComboBoxAttachment(
+                apvts, "mode", *combo));
+        }
+        else if (combo->getName() == "styleCombo")
+        {
+            comboAttachments.add(new juce::AudioProcessorValueTreeState::ComboBoxAttachment(
+                apvts, "style", *combo));
+        }
+    }
+    
+    // Slider attachments
+    for (auto* slider : sliders)
+    {
+        if (slider->getName() == "mixSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "mix", *slider));
+        }
+        else if (slider->getName() == "feedbackSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "feedback", *slider));
+        }
+        else if (slider->getName() == "delaySlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "delay_time_ms", *slider));
+        }
+        else if (slider->getName() == "modRateSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "mod_rate", *slider));
+        }
+        else if (slider->getName() == "modDepthSlider")
+        {
+            sliderAttachments.add(new juce::AudioProcessorValueTreeState::SliderAttachment(
+                apvts, "mod_depth", *slider));
+        }
     }
 }
 
