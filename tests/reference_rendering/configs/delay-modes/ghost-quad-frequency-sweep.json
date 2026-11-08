@@ -1,0 +1,29 @@
+{
+  "name": "Ghost Mode - Quad Style - Frequency Sweep",
+  "description": "Reference rendering for Ghost mode with Quad style using frequency sweep to test frequency shifting",
+  "plugin": "delay",
+  "mode": "Ghost",
+  "style": "Quad",
+  "parameters": {
+    "mix": 1.0,
+    "feedback": 0.4,
+    "delayTimeMs": 400.0,
+    "era": 0.5,
+    "diffusionAmount": 0.6,
+    "diffusionSize": 0.5,
+    "inputGain": 0.0,
+    "outputGain": 0.0,
+    "spread": 0.8,
+    "width": 1.0
+  },
+  "signal": {
+    "type": "sweep",
+    "sweep_type": "logarithmic",
+    "start_freq": 20.0,
+    "end_freq": 20000.0
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 5.0,
+  "block_size": 1024,
+  "notes": "This configuration tests the Ghost mode's frequency shifting behavior. Era=0.5 should give a balance between Present and Future characteristics."
+}
