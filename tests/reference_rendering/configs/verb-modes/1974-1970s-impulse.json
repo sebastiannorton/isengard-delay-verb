@@ -1,0 +1,34 @@
+{
+  "name": "Verb 1974 Mode - 1970s Color - Impulse Response",
+  "description": "Reference rendering for 1974 mode (AMS RMX16) with 1970s color using impulse signal.",
+  "plugin": "verb",
+  "mode": "1974",
+  "color": "1970s",
+  "parameters": {
+    "mix": 1.0,
+    "predelay": 80.0,
+    "decay": 0.6,
+    "size": 0.6,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "bassXover": 200.0,
+    "highCut": 10000.0,
+    "damping": 0.5,
+    "dampingFreq": 8000.0,
+    "modRate": 0.3,
+    "modDepth": 0.2,
+    "earlyLateBalance": 0.5,
+    "width": 0.5,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "impulse",
+    "position": 0,
+    "amplitude": 0.5
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 8.0,
+  "block_size": 1024,
+  "notes": "AMS RMX16 digital reverb emulation. Characteristic early reflection pattern."
+}
