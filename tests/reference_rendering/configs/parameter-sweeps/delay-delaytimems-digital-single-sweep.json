@@ -1,0 +1,24 @@
+{
+  "name": "Delay Time Sweep",
+  "description": "Sweep delayTimeMs from 50ms to 1000ms",
+  "plugin": "delay",
+  "mode": "Digital",
+  "style": "Single",
+  "parameter": "delayTimeMs",
+  "range": [
+    50.0,
+    1000.0
+  ],
+  "steps": 20,
+  "scale": "logarithmic",
+  "signal_type": "impulse",
+  "sample_rate": 44100,
+  "duration_seconds": 3.0,
+  "base_params": {
+    "mix": 1.0,
+    "feedback": 0.5,
+    "modRate": 0.0,
+    "modDepth": 0.0
+  },
+  "notes": "Test delay time accuracy and interpolation"
+}
