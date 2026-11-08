@@ -1,0 +1,29 @@
+{
+  "name": "Verb Damping Sweep",
+  "description": "Sweep damping parameter from 0.0 to 1.0",
+  "plugin": "verb",
+  "mode": "1978",
+  "color": "1980s",
+  "parameter": "damping",
+  "range": [
+    0.0,
+    1.0
+  ],
+  "steps": 21,
+  "scale": "linear",
+  "signal_type": "white",
+  "sample_rate": 44100,
+  "duration_seconds": 5.0,
+  "base_params": {
+    "mix": 1.0,
+    "predelay": 50.0,
+    "decay": 0.5,
+    "size": 0.5,
+    "attack": 0.0,
+    "bassMult": 1.0,
+    "highCut": 10000.0,
+    "modRate": 0.5,
+    "modDepth": 0.3
+  },
+  "notes": "Test high-frequency damping"
+}
