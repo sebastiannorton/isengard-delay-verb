@@ -1,0 +1,30 @@
+{
+  "name": "Tape Mode - Single Style - Impulse Response",
+  "description": "Reference rendering configuration for Tape mode with Single style using impulse signal",
+  "plugin": "delay",
+  "mode": "Tape",
+  "style": "Single",
+  "parameters": {
+    "mix": 1.0,
+    "feedback": 0.5,
+    "delayTimeMs": 500.0,
+    "modRate": 1.0,
+    "modDepth": 0.3,
+    "drive": 0.5,
+    "wowDepth": 0.3,
+    "flutterDepth": 0.2,
+    "diffusionAmount": 0.5,
+    "diffusionSize": 0.5,
+    "inputGain": 0.0,
+    "outputGain": 0.0
+  },
+  "signal": {
+    "type": "impulse",
+    "position": 0,
+    "amplitude": 0.5
+  },
+  "sample_rate": 44100,
+  "duration_seconds": 5.0,
+  "block_size": 1024,
+  "notes": "This configuration tests the impulse response of Tape mode with Single style. The impulse should reveal the delay time, feedback characteristics, and diffusion network behavior."
+}
